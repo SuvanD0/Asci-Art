@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Digital Identity Mirror - Enhanced</title>
+    <title>ASCII Art Style Comparison</title>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.11.1/lib/p5.js"></script>
     <style>
         body {
@@ -10,10 +10,10 @@
             background: black;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
             min-height: 100vh;
             font-family: monospace;
+            padding: 20px;
         }
         #title {
             color: white;
@@ -22,99 +22,149 @@
             font-family: Arial, sans-serif;
             text-align: center;
         }
-        #ascii-container {
-            color: rgb(255, 255, 255);
-            font-size: 6px;          /* Reduced font size for higher density */
-            line-height: 6px;        /* Matching line height */
-            letter-spacing: 1px;     /* Reduced letter spacing */
-            white-space: pre;
-            background: rgb(59, 59, 59);
-            transition: all 0.3s ease;
-            padding: 20px;
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+        }
+        .ascii-box {
+            position: relative;
+            padding: 15px;
             border: 2px solid rgba(255, 255, 255, 0.1);
-            transform: scale(1.2);   /* Slightly enlarged display */
+            background: rgb(59, 59, 59);
         }
-        #description {
-            color: #888;
-            max-width: 600px;
-            text-align: center;
-            margin-top: 20px;
-            font-family: Arial, sans-serif;
+        .ascii-content {
+            color: rgb(255, 255, 255);
+            font-family: 'Courier New', monospace;  /* Force monospace font */
+            font-size: 6px;
+            line-height: 6px;
+            letter-spacing: 0px;   /* Removed extra spacing since we're using monospace */
+            white-space: pre;
         }
-        @keyframes colorShift {
-            0% { color: white; }
-            33% { color: #FFB6C1; }
-            66% { color: #87CEEB; }
-            100% { color: white; }
+        .style-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 5px;
+            font-size: 10px;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
-    <div id="title">Digital Identity Mirror</div>
-    <div id="ascii-container"></div>
-    <div id="description">
-        A high-resolution reflection on identity through cultural typography, merging traditional Telugu characters with digital aesthetics.
+    <div id="title">ASCII Style Comparison</div>
+    <div class="grid-container">
+        <div class="ascii-box">
+            <div class="style-label">High Contrast Blocks</div>
+            <div class="ascii-content" id="style1"></div>
+        </div>
+        <div class="ascii-box">
+            <div class="style-label">Detailed Gradient</div>
+            <div class="ascii-content" id="style2"></div>
+        </div>
+        <div class="ascii-box">
+            <div class="style-label">Geometric Shapes</div>
+            <div class="ascii-content" id="style3"></div>
+        </div>
+        <div class="ascii-box">
+            <div class="style-label">Classic ASCII</div>
+            <div class="ascii-content" id="style4"></div>
+        </div>
     </div>
+
     <script>
         let capture;
-        let asciiDiv;
-        let currentCharacterSet = 0;
-        
-        // High contrast character sets for dramatic effect
-        const characterSets = [
-            // Extreme contrast set - very dramatic
-            '█▓▒░ ',
+        const styles = [
+            {
+                id: 'style1',
+                chars: '█▓▒░ ',
+                contrast: 1.8,
+                threshold: true,
+                thresholdValues: [40, 210]
+            },
+            {
+                id: 'style2',
+                chars: '@%#*+=-:. ',
+                contrast: 1.2,
+                threshold: false,
+                brightness: 1.1
+            },
+            {
+                id: 'style3',
+                chars: '■□▲△▼▽★☆◆◇',
+                contrast: 1.7,                  // Increased contrast
+                threshold: true,
+                thresholdValues: [50, 170],     // Lowered upper threshold to catch more highlights
+                brightness: 1.2                 // Added brightness boost
+            },
+            {
+                id: 'style4',
+                chars: '@MHQ#NBWm8RD&$0GOPC6543Ehi=+~-:. ',  // Consistent-width characters
+                contrast: 1.3,
+                threshold: false,
+                brightness: 0.9
+            }
         ];
 
         function setup() {
             noCanvas();
-            // Increased resolution of video capture
             capture = createCapture(VIDEO);
-            capture.size(160, 120);  // Doubled resolution
+            capture.size(120, 90);
             capture.hide();
-            asciiDiv = select('#ascii-container');
+        }
 
-            setInterval(() => {
-                currentCharacterSet = (currentCharacterSet + 1) % characterSets.length;
-                asciiDiv.style('animation', 'colorShift 3s ease');
-            }, 5000);
+        function processPixel(r, g, b, style) {
+            let brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+            
+            // Apply contrast
+            const midpoint = 128;
+            brightness = constrain(style.contrast * (brightness - midpoint) + midpoint, 0, 255);
+            
+            // Apply threshold if enabled
+            if (style.threshold) {
+                if (brightness > style.thresholdValues[1]) brightness = 255;
+                if (brightness < style.thresholdValues[0]) brightness = 0;
+            }
+            
+            // Apply brightness adjustment if specified
+            if (style.brightness) {
+                brightness *= style.brightness;
+                brightness = constrain(brightness, 0, 255);
+            }
+            
+            return brightness;
         }
 
         function draw() {
             capture.loadPixels();
-            let asciiImage = '';
-            const density = characterSets[currentCharacterSet];
             
-            for (let j = 0; j < capture.height; j++) {
-                for (let i = 0; i < capture.width; i++) {
-                    const pixelIndex = (i + j * capture.width) * 4;
-                    const r = capture.pixels[pixelIndex];
-                    const g = capture.pixels[pixelIndex + 1];
-                    const b = capture.pixels[pixelIndex + 2];
-                    
-                    // Enhanced contrast and brightness calculation
-                    let brightness = (0.299 * r + 0.587 * g + 0.114 * b);
-                    
-                    // Apply contrast enhancement
-                    const contrast = 1.2; // Increase for more dramatic effect
-                    const midpoint = 128;
-                    brightness = constrain(contrast * (brightness - midpoint) + midpoint, 0, 255);
-                    
-                    // Threshold for more dramatic blacks and whites
-                    if (brightness > 200) brightness = 255;
-                    if (brightness < 50) brightness = 0;
-                    
-                    // Sharp character mapping
-                    const len = density.length;
-                    const charIndex = floor(map(brightness, 0, 255, len - 1, 0));
-                    const c = density.charAt(charIndex);
-                    
-                    if (c === ' ') asciiImage += '&nbsp;';
-                    else asciiImage += c;
+            styles.forEach(style => {
+                let asciiImage = '';
+                const density = style.chars;
+                
+                for (let j = 0; j < capture.height; j++) {
+                    for (let i = 0; i < capture.width; i++) {
+                        const pixelIndex = (i + j * capture.width) * 4;
+                        const r = capture.pixels[pixelIndex];
+                        const g = capture.pixels[pixelIndex + 1];
+                        const b = capture.pixels[pixelIndex + 2];
+                        
+                        const processedBrightness = processPixel(r, g, b, style);
+                        const len = density.length;
+                        const charIndex = floor(map(processedBrightness, 0, 255, len - 1, 0));
+                        const c = density.charAt(charIndex);
+                        
+                        if (c === ' ') asciiImage += '&nbsp;';
+                        else asciiImage += c;
+                    }
+                    asciiImage += '<br/>';
                 }
-                asciiImage += '<br/>';
-            }
-            asciiDiv.html(asciiImage);
+                
+                select(`#${style.id}`).html(asciiImage);
+            });
         }
     </script>
 </body>
