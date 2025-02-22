@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Digital Identity Mirror - Enhanced</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.1/lib/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: black;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #title {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #ascii-container {
+            color: rgb(255, 255, 255);
+            font-size: 6px;          /* Reduced font size for higher density */
+            line-height: 6px;        /* Matching line height */
+            letter-spacing: 1px;     /* Reduced letter spacing */
+            white-space: pre;
+            background: rgb(59, 59, 59);
+            transition: all 0.3s ease;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transform: scale(1.2);   /* Slightly enlarged display */
+        }
+        #description {
+            color: #888;
+            max-width: 600px;
+            text-align: center;
+            margin-top: 20px;
+            font-family: Arial, sans-serif;
+        }
+        @keyframes colorShift {
+            0% { color: white; }
+            33% { color: #FFB6C1; }
+            66% { color: #87CEEB; }
+            100% { color: white; }
+        }
+    </style>
+</head>
+<body>
+    <div id="title">Digital Identity Mirror</div>
+    <div id="ascii-container"></div>
+    <div id="description">
+        A high-resolution reflection on identity through cultural typography, merging traditional Telugu characters with digital aesthetics.
+    </div>
+    <script>
+        let capture;
+        let asciiDiv;
+        let currentCharacterSet = 0;
+        
+        // High contrast character sets for dramatic effect
+        const characterSets = [
+            // Extreme contrast set - very dramatic
+            '█▓▒░ ',
+        ];
+
+        function setup() {
+            noCanvas();
+            // Increased resolution of video capture
+            capture = createCapture(VIDEO);
+            capture.size(160, 120);  // Doubled resolution
+            capture.hide();
+            asciiDiv = select('#ascii-container');
+
+            setInterval(() => {
+                currentCharacterSet = (currentCharacterSet + 1) % characterSets.length;
+                asciiDiv.style('animation', 'colorShift 3s ease');
+            }, 5000);
+        }
+
+        function draw() {
+            capture.loadPixels();
+            let asciiImage = '';
+            const density = characterSets[currentCharacterSet];
+            
+            for (let j = 0; j < capture.height; j++) {
+                for (let i = 0; i < capture.width; i++) {
+                    const pixelIndex = (i + j * capture.width) * 4;
+                    const r = capture.pixels[pixelIndex];
+                    const g = capture.pixels[pixelIndex + 1];
+                    const b = capture.pixels[pixelIndex + 2];
+                    
+                    // Enhanced contrast and brightness calculation
+                    let brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+                    
+                    // Apply contrast enhancement
+                    const contrast = 1.2; // Increase for more dramatic effect
+                    const midpoint = 128;
+                    brightness = constrain(contrast * (brightness - midpoint) + midpoint, 0, 255);
+                    
+                    // Threshold for more dramatic blacks and whites
+                    if (brightness > 200) brightness = 255;
+                    if (brightness < 50) brightness = 0;
+                    
+                    // Sharp character mapping
+                    const len = density.length;
+                    const charIndex = floor(map(brightness, 0, 255, len - 1, 0));
+                    const c = density.charAt(charIndex);
+                    
+                    if (c === ' ') asciiImage += '&nbsp;';
+                    else asciiImage += c;
+                }
+                asciiImage += '<br/>';
+            }
+            asciiDiv.html(asciiImage);
+        }
+    </script>
+</body>
+</html>
